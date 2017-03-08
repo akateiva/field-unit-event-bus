@@ -35,7 +35,7 @@ module.exports = class EventBus{
 				message = {};
 			}
 
-			this.hooks[topic](topic, message);
+			this.hooks[topic](message);
 		}
 	}
 
