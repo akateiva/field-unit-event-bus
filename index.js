@@ -27,7 +27,7 @@ module.exports = class EventBus{
 	_onMqttMessage(topic, message){
 		if(topic in this.hooks && typeof this.hooks[topic] === "function"){
 			winston.info("Handling a message", topic);
-			this.hooks[topic](topic, JSON.parse(message.toString()));
+			this.hooks[topic](topic, JSON.parse(message.toString()) || {});
 		}
 	}
 
