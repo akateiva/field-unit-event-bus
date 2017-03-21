@@ -1,5 +1,7 @@
 var mqtt = require('mqtt');
 var winston = require('winston');
+var EventEmitter = require('events');
+
 
 module.exports = class EventBus{
 	/**
@@ -9,7 +11,8 @@ module.exports = class EventBus{
 	 * @return {void} 
 	 */
 	constructor(mqttHost){
-		this.hooks = {};						//key is the topic of a message and value is a handler function
+		this.events = new EventEmitter();
+
 		this.client = mqtt.connect(mqttHost);	//connect to the MQTT broker
 		this.client.on('message', this._onMqttMessage.bind(this));
 		this.client.on('connect', this._onMqttConnect.bind(this));
@@ -25,25 +28,19 @@ module.exports = class EventBus{
 	 * @return {void}
 	 */
 	_onMqttMessage(topic, message){
-		if(topic in this.hooks && typeof this.hooks[topic] === "function"){
-			winston.info("Handling a message", topic);
 
-			//In case message is empty string or malformed JSON, 
-			try{
-				message = JSON.parse(message.toString());
-			}catch(e){
-				message = {};
-			}
-
-			this.hooks[topic](message);
+		//In case message is empty string or malformed JSON, 
+		try{
+			message = JSON.parse(message.toString());
+		}catch(e){
+			message = {};
 		}
+
+		winston.info("Handling message for %s", topic);
+		this.events.emit('#', message, topic);
+		this.events.emit(topic, message, topic);
 	}
 
-	/**
-	 * private onMqttConnect
-	 * handles a new MQTT connection
-	 * @return {void}
-	 */	
 	_onMqttConnect(){
 		winston.info("Connected to broker");
 	}
@@ -63,9 +60,8 @@ module.exports = class EventBus{
 	 * @return {void}
 	 */
 	on(topic, callback){
-		//add unsubscribe, check if client has connected before subscribing
-		this.hooks[topic] = callback;
 		this.client.subscribe(topic);
+		this.events.on(topic, callback);
 	}
 
 	/**
